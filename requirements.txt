@@ -1,0 +1,8 @@
+# requirements.txt
+fastapi
+uvicorn[standard]
+line-bot-sdk
+google-cloud-aiplatform
+googlemaps 
+python-dotenv 
+# その他の必要なライブラリ

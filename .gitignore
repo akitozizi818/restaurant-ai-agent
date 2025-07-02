@@ -1,0 +1,9 @@
+# .gitignore
+.venv/
+__pycache__/
+.env 
+*.json
+*.log
+.DS_Store
+credentials/
+ngrok.yml

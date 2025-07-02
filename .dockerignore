@@ -1,0 +1,26 @@
+# .dockerignore
+
+# Git関連のファイル（リポジトリ情報）
+.git
+.gitignore
+
+# Pythonの仮想環境
+.venv/
+venv/
+*.pyc
+__pycache__/
+
+# Docker関連のキャッシュや一時ファイル
+.dockerignore
+
+# ローカル環境特有のファイルやIDEの設定ファイル
+.vscode/
+.DS_Store 
+
+# 環境変数ファイルや認証情報（機密情報を含むため、イメージに含めない）
+.env
+credentials/ 
+
+# ログファイルや一時データ
+*.log
+tmp/

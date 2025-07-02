@@ -1,0 +1,57 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # FastAPI Application Service
+  web: # サービス名をwebのままにします
+    build:
+      context: .
+      dockerfile: Dockerfile # FastAPIのDockerfile
+    container_name: fastapi_app # コンテナ名を指定
+    ports:
+      - "8000:8000" # ホストの8000番ポートをコンテナの8000番ポートにマッピング
+    volumes:
+      - .:/app # ホストのプロジェクトルートをコンテナの /app にマウント
+      - ./credentials:/app/credentials # ホストのcredentialsをコンテナの/app/credentialsにマウント
+    env_file:
+      - .env # .envファイルから環境変数を読み込む
+    networks:
+      - app-network # <-- 専用ネットワークに参加
+    # command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # 開発中は自動リロードを有効にすることも検討
+    healthcheck: # <-- FastAPIのヘルスチェックを追加（ngrokのdepends_onで利用）
+      test: ["CMD-SHELL", "curl -f http://localhost:8000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # アプリケーション起動に時間がかかる場合を考慮
+
+  # ngrok Service（公式Dockerイメージを使用）
+  ngrok:
+    image: ngrok/ngrok:latest
+    platform: linux/arm64 # <-- M1 Macの場合、明示的にプラットフォームを指定
+    container_name: ngrok_tunnel
+    env_file:
+      - .env # .envファイルからトークンを読み込む
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN} # <-- ngrok認証トークン
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml:ro # <-- ngrok設定ファイルをマウント
+    command: ["start", "--all", "--config", "/etc/ngrok.yml"] # <-- ngrok.ymlを使用するコマンド
+    networks:
+      - app-network # <-- 専用ネットワークに参加
+    depends_on:
+      web: # <-- webサービスに依存
+        condition: service_healthy # <-- webサービスがヘルスチェックをパスしてから起動
+    restart: unless-stopped
+    ports:
+      - "4040:4040" # ngrokのWebインターフェース（デバッグ用）
+
+# ボリューム定義（もし永続化データが必要なら）
+# 今回はJSONファイルDBなので、特に必要なければ削除してもOK
+# volumes:
+#   firebase_data: # Firebase Emulator用なので、このプロジェクトでは不要
+
+# ネットワーク定義
+networks:
+  app-network:
+    driver: bridge
