@@ -48,6 +48,24 @@ class LineActions:
         self.send_restaurant_carousel(reply_token, restaurant_list)
         
         return {"status": "success", "message": f"{len(restaurant_list)}件のレストランを提案しました。"}
+    
+    def final_restaurant(self, reply_token: str, query: str):
+        """
+        AIから呼び出される、レストランを決定する関数。
+        """
+        print(f"--- final_restaurant関数がAIによって呼び出されました ---")
+        
+        # ダミーデータではなく、GoogleMapsActionsを使って本物の情報を取得
+        restaurant_list = self.gmaps_actions.search_and_format_restaurants(query)
+        
+        if not restaurant_list:
+            self.reply_with_text(reply_token, "すみません、条件に合うお店が見つかりませんでした。")
+            return {"status": "error", "message": "No restaurants found."}
+
+        # 取得した本物のデータでカルーセルを送信
+        self.send_final_restaurant(reply_token, restaurant_list[0])
+        
+        return {"status": "success", "message": "最終的なレストランを提案しました。"}
 
 
     def reply_with_text(self, reply_token: str, text: str):
@@ -104,6 +122,152 @@ class LineActions:
         """個別ヒアリング中の応答"""
         text = f"希望をヒアリング中です...（「{user_input}」を受け付けました）"
         self.reply_with_text(reply_token, text)
+
+    def send_final_restaurant(self, reply_token: str, restaurant: dict):
+        """最終的に決定したレストランをFlex Messageで送信する"""
+        bubble = self._create_final_restaurant_bubble(restaurant)
+        messages_to_send = [
+            TextSendMessage(text="お店が決定しました！"),
+            FlexSendMessage(
+                alt_text="お店が決定しました！",
+                contents=bubble
+            )
+        ]
+        self.line_bot_api.reply_message(reply_token, messages_to_send)
+
+    def _create_final_restaurant_bubble(self, restaurant: dict) -> BubbleContainer:
+        """最終的に提案するレストラン情報カード（バブル）を作成する"""
+        return BubbleContainer(
+            # hero: バブル上部のメイン画像エリア
+            hero=ImageComponent(
+                url=restaurant.get(
+                    "image_url",
+                    "https://placehold.co/600x400/EFEFEF/AAAAAA?text=No+Image",
+                ),
+                size="full",
+                aspect_ratio="20:13",
+                aspect_mode="cover",
+                action=URIAction(uri=restaurant.get("url", "#"), label="ウェブサイト"),
+            ),
+            # body: 主要な情報を表示する中央のエリア
+            body=BoxComponent(
+                layout="vertical", # contents内の要素を縦に並べる
+                spacing="md",
+                background_color="#F9EDE7", # body全体の背景色
+                contents=[
+                    # 店名
+                    TextComponent(
+                        text=restaurant.get("name", "レストラン名なし"),
+                        weight="bold", size="lg", wrap=True, color="#666565"
+                    ),
+                    # 評価（星と数字）
+                    BoxComponent(
+                        layout="horizontal", # 要素のベースライン（下端）を揃えて横に並べる
+                        spacing="md", # 要素間のスペース
+                        margin="md",
+                        contents=[
+                            TextComponent(text="★★★★☆", size="md", color="#FFBF47", flex=0, gravity="center"),
+                            TextComponent(
+                                text=str(restaurant.get("rating", 0.0)),
+                                size="sm", color="#999999", flex=0, margin="md", gravity="center"
+                            ),
+                        ],
+                    ),
+                    # 住所（アイコン付き）
+                    BoxComponent(
+                        layout="baseline", spacing="md",
+                        contents=[
+                            IconComponent(
+                                url=f"{NGROK_BASE_URL}/static/icons/place.png",
+                                size="sm"
+                            ),
+                            TextComponent(
+                                text=restaurant.get("address", "-"),
+                                color="#929292", size="sm", flex=4, wrap=True,
+                            ),
+                        ],
+                    ),
+                    # 区切り線
+                    SeparatorComponent(margin="lg", color="#D0D0D0"),
+                    # 詳細情報（ジャンル、営業時間）
+                    BoxComponent(
+                        layout="vertical", margin="lg", spacing="sm",
+                        contents=[
+                            # ジャンルの行
+                            BoxComponent(
+                                layout="baseline", spacing="md",
+                                contents=[
+                                    IconComponent(url=f"{NGROK_BASE_URL}/static/icons/genre.png", size="sm"),
+                                    TextComponent(text=restaurant.get("genre", "-"), color="#929292", size="sm", flex=4, wrap=True),
+                                ],
+                            ),
+                            # 営業時間の行
+                            BoxComponent(
+                                layout="baseline", spacing="md",
+                                contents=[
+                                    IconComponent(url=f"{NGROK_BASE_URL}/static/icons/clock.png", size="sm"),
+                                    TextComponent(text=restaurant.get("time", "9:00 ~ 22:00"), color="#929292", size="sm", flex=4, wrap=True),
+                                ],
+                            ),
+                        ],
+                    ),
+                    # 区切り線
+                    SeparatorComponent(margin="lg", color="#D0D0D0"),
+                    # 口コミ件数
+                    BoxComponent(
+                        layout="baseline", spacing="md",
+                        contents=[
+                            IconComponent(url=f"{NGROK_BASE_URL}/static/icons/comment.png", size="sm"),
+                            TextComponent(text=restaurant.get("userRatingCount", "200") + "件のレビュー", color="#929292", size="sm", flex=4, wrap=True),
+                        ],
+                    ),
+                    # AIによる口コミ要約
+                    BoxComponent(
+                        layout="vertical", margin="lg", spacing="sm",
+                        contents=[
+                            # 良い口コミの要約
+                            BoxComponent(
+                                layout="baseline", spacing="sm",
+                                contents=[
+                                    IconComponent(url=f"{NGROK_BASE_URL}/static/icons/good.png", size="sm"),
+                                    TextComponent(
+                                        text=restaurant.get("reviewGoodSummary", "（AIによる良い口コミの要約）"),
+                                        color="#929292", size="sm", flex=4, wrap=True,
+                                    ),
+                                ]
+                            ),
+                            # 悪い口コミの要約
+                            BoxComponent(
+                                layout="baseline", spacing="sm",
+                                contents=[
+                                    IconComponent(url=f"{NGROK_BASE_URL}/static/icons/bad.png", size="sm"),
+                                    TextComponent(
+                                        text=restaurant.get("reviewBadSummary", "（AIによる改善点や注意点の要約）"),
+                                        color="#929292", size="sm", flex=4, wrap=True,
+                                    ),
+                                ]
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            # footer: ボタンなどを配置する最下部のエリア
+            footer=BoxComponent(
+                layout="vertical",
+                spacing="sm",
+                background_color="#F9EDE7",
+                contents=[
+                    ButtonComponent(
+                        style="primary",
+                        height="sm",
+                        action=URIAction(
+                            label="予約する", uri=restaurant.get("url", "#")
+                        ),
+                        color="#CB2200" # 背景色
+                    )
+                ],
+            ),
+        )
 
     def send_restaurant_carousel(self, reply_token: str, restaurant_list: list):
         """レストラン候補をカルーセル形式のFlex Messageで送信する"""
