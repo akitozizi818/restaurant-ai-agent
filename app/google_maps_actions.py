@@ -59,13 +59,47 @@ class GoogleMapsActions:
             print(f"AIによる口コミ要約中にエラーが発生しました: {e}")
             return "口コミ多数で高評価です。", "特筆すべきネガティブな点はありません。"
 
+    # ★★★ ここが変更点 ① ★★★
+    # 口コミと店名からジャンルを推定する新しい関数を追加
+    def _extract_genre_by_ai(self, restaurant_name: str, reviews: list) -> str:
+        """AIを使って店名と口コミから最も的確なジャンルを抽出する"""
+        if not self.gemini_model:
+            return "その他"
+            
+        review_texts = " ".join([review.get('text', '') for review in reviews[:5]])
+        if not review_texts:
+            return "その他"
+
+        prompt = f"""あなたはプロのグルメアナリストです。
+        以下の店名と口コミを参考に、この飲食店の最も的確なジャンルを一つだけ、簡潔に答えてください。
+        (例: 家系ラーメン, 寿司, イタリアン, カフェ, 焼肉)
+
+        ---店名---
+        {restaurant_name}
+
+        ---口コミ---
+        {review_texts}
+
+        ---ジャンル---
+        """
+        try:
+            response = self.gemini_model.generate_content(prompt)
+            # AIの回答から余分なテキストを取り除く
+            genre = response.text.strip().replace("ジャンル:", "").replace("【ジャンル】", "").strip()
+            return genre or "その他"
+        except Exception as e:
+            print(f"AIによるジャンル抽出中にエラーが発生しました: {e}")
+            return "その他"
+        
     # ★★★ ここが修正点 ③ ★★★
     # 引数に place を追加
     def _format_place_details(self, details: dict, place: dict) -> dict:
         photo_reference = details.get('photos', [{}])[0].get('photo_reference')
         reviews = details.get('reviews', [])
+        restaurant_name = details.get('name', '名前不明')
         good_summary, bad_summary = self._summarize_reviews_by_ai(reviews)
-        
+        genre = self._extract_genre_by_ai(restaurant_name, reviews)
+
         # ★★★ ここが修正点 ④ ★★★
         # ジャンル情報は、詳細(details)ではなく、最初の検索結果(place)から取得する
         excluded_types = {'restaurant', 'food', 'point_of_interest', 'establishment'}
@@ -77,7 +111,7 @@ class GoogleMapsActions:
             "rating": details.get('rating', 0.0),
             "userRatingCount": str(details.get('user_ratings_total', 0)),
             "address": details.get('formatted_address', '-'),
-            "genre": ", ".join(genre_list) or "その他",
+            "genre": genre,
             "url": details.get('website', f"https://www.google.com/maps/search/?api=1&query=Google&query_place_id={details.get('place_id')}"),
             "reviewGoodSummary": good_summary,
             "reviewBadSummary": bad_summary,
