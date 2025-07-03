@@ -12,6 +12,14 @@ function_declarations = [
                 "query": {
                     "type": "string",
                     "description": "地名、料理のジャンル、その他の特徴を含む検索キーワード。例: '新宿 和食 個室'"
+                },
+                "min_price": {
+                    "type": "number",
+                    "description": "価格帯の下限（0:無料, 1:安い, 2:普通, 3:高い, 4:とても高い）"
+                },
+                "max_price": {
+                    "type": "number",
+                    "description": "価格帯の上限（0:無料, 1:安い, 2:普通, 3:高い, 4:とても高い）"
                 }
             },
             "required": ["query"]
@@ -26,6 +34,14 @@ function_declarations = [
                 "query": {
                     "type": "string",
                     "description": "地名、料理のジャンル、その他の特徴を含む検索キーワード。例: '新宿 和食 個室'"
+                },
+                "min_price": {
+                    "type": "number",
+                    "description": "価格帯の下限（0:無料, 1:安い, 2:普通, 3:高い, 4:とても高い）"
+                },
+                "max_price": {
+                    "type": "number",
+                    "description": "価格帯の上限（0:無料, 1:安い, 2:普通, 3:高い, 4:とても高い）"
                 }
             },
             "required": ["query"]
