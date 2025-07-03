@@ -122,7 +122,6 @@ class LineActions:
         """
         items = []
         for choice in choices:
-            # 選択肢のテキストをそのまま、ボタンのラベルと押した時のテキストに設定
             button = QuickReplyButton(action=MessageAction(label=choice, text=choice))
             items.append(button)
 
@@ -130,9 +129,11 @@ class LineActions:
 
         try:
             self.line_bot_api.reply_message(reply_token, message)
+            return {"status": "success", "message": f"質問「{question}」を送信しました。"}
         except LineBotApiError as e:
             print(f"Error replying with quick reply: {e}")
-
+            return {"status": "error", "message": str(e)}
+        
     def send_join_greeting(self, reply_token: str):
         """グループ参加時の挨拶メッセージを送信する"""
         text = "こんにちは！飲み会調整ボットです🍻\n幹事さんは「調整スタート」と話しかけて、お店探しを始めてくださいね！"
