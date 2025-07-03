@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, JoinEvent, QuickReply, QuickReplyButton, MessageAction
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, JoinEvent, QuickReply, QuickReplyButton, MessageAction, BubbleContainer, CarouselContainer, ImageComponent, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent, URIAction, FlexSendMessage
 from dotenv import load_dotenv
 import os
 
@@ -64,6 +64,132 @@ async def callback(request: Request):
         raise HTTPException(status_code=400, detail="Invalid signature")
     return "OK"
 
+# --- この関数でカルーセルメッセージを作成して送信 ---
+def send_restaurant_carousel(reply_token, restaurant_list):
+    """
+    レストラン情報のリストを受け取り、カルーセル形式のFlex Messageを送信する
+    """
+    bubbles = []
+    # レストランの数だけ、情報カード（バブル）を作成
+    for restaurant in restaurant_list:
+        bubble = create_restaurant_bubble(restaurant)
+        bubbles.append(bubble)
+
+    # カルーセルコンテナを作成
+    carousel_container = CarouselContainer(contents=bubbles)
+
+    # FlexSendMessageを作成
+    # alt_textは、LINEのトークリストに表示される代替テキストです
+    flex_message = FlexSendMessage(
+        alt_text="おすすめのレストランが見つかりました！",
+        contents=carousel_container
+    )
+
+    # メッセージを送信
+    line_bot_api.reply_message(reply_token, flex_message)
+
+
+# --- 個別のレストラン情報カード（バブル）を作成するヘルパー関数 ---
+def create_restaurant_bubble(restaurant: dict) -> BubbleContainer:
+    """
+    一つのレストラン情報から、一つのバブルコンテナを作成する
+    """
+    return BubbleContainer(
+        # --- ヒーローブロック (メイン画像) ---
+        hero=ImageComponent(
+            url=restaurant.get("image_url", "https://example.com/default.jpg"),
+            size="full",
+            aspect_ratio="20:13",
+            aspect_mode="cover",
+            action=URIAction(uri=restaurant.get("url", "#"), label="ウェブサイト")
+        ),
+        # --- ボディブロック (店名、評価、場所などの情報) ---
+        body=BoxComponent(
+            layout="vertical",
+            spacing="sm",
+            contents=[
+                # 店名
+                TextComponent(
+                    text=restaurant.get("name", "レストラン名なし"),
+                    weight="bold",
+                    size="xl",
+                    wrap=True
+                ),
+                # 評価 (例: ★★★★☆ 4.0)
+                BoxComponent(
+                    layout="baseline",
+                    margin="md",
+                    contents=[
+                        # ここは星の数だけループさせたり、固定の星画像にしたりする
+                        TextComponent(text="★★★★☆", size="sm", color="#ffb740", flex=0),
+                        TextComponent(text=str(restaurant.get("rating", 0.0)), size="sm", color="#999999", flex=0, margin="md"),
+                    ]
+                ),
+                # ジャンルや場所
+                BoxComponent(
+                    layout="vertical",
+                    margin="lg",
+                    spacing="sm",
+                    contents=[
+                        BoxComponent(
+                            layout="baseline",
+                            spacing="sm",
+                            contents=[
+                                TextComponent(text="場所", color="#aaaaaa", size="sm", flex=1),
+                                TextComponent(text=restaurant.get("address", "-"), color="#666666", size="sm", flex=4, wrap=True),
+                            ]
+                        ),
+                        BoxComponent(
+                            layout="baseline",
+                            spacing="sm",
+                            contents=[
+                                TextComponent(text="ジャンル", color="#aaaaaa", size="sm", flex=1),
+                                TextComponent(text=restaurant.get("genre", "-"), color="#666666", size="sm", flex=4, wrap=True),
+                            ]
+                        ),
+                    ]
+                ),
+            ]
+        ),
+        # --- フッターブロック (アクションボタン) ---
+        footer=BoxComponent(
+            layout="vertical",
+            spacing="sm",
+            contents=[
+                # 詳細を見るボタン (Webサイトへ)
+                ButtonComponent(
+                    style="link",
+                    height="sm",
+                    action=URIAction(label="詳しく見る", uri=restaurant.get("url", "#"))
+                ),
+                # このお店にするボタン (ボットへの返信)
+                ButtonComponent(
+                    style="primary",
+                    height="sm",
+                    action=MessageAction(label="このお店にする！", text=f"{restaurant.get('name')}に決めます")
+                ),
+            ]
+        )
+    )
+
+dummy_restaurants = [
+    {
+        "name": "最高のイタリアン A",
+        "image_url": "https://example.com/restaurant_a.jpg",
+        "rating": 4.5,
+        "address": "東京都文京区本郷1-2-3",
+        "genre": "イタリアン",
+        "url": "https://example.com/a"
+    },
+    {
+        "name": "絶品和食 B",
+        "image_url": "https://example.com/restaurant_b.jpg",
+        "rating": 4.2,
+        "address": "東京都文京区本郷4-5-6",
+        "genre": "和食・割烹",
+        "url": "https://example.com/b"
+    },
+]
 
 # --- LINEイベントのハンドラ定義 ---
 @handler.add(JoinEvent)
@@ -87,7 +213,7 @@ def handle_join(event):
 def handle_message(event):
     reply_token = event.reply_token
     user_message = event.message.text
-    
+
     # もしメッセージが「a」だったら
     if user_message == "a":
         # シンプルなテキストメッセージを作成
@@ -106,10 +232,16 @@ def handle_message(event):
                 ]
             )
         )
+
+    elif user_message == "c":
+        send_restaurant_carousel(
+            reply_token,
+            dummy_restaurants
+        )
     
     # 「a」でも「b」でもなかった場合
     else:
-        reply = TextSendMessage(text=f"「{event.message.text}」と送られました。'a'か'b'と送ってみてください。")
+        reply = TextSendMessage(text=f"「{event.message.text}」と送られました。'a'か'b'か'c'と送ってみてください。")
 
     # 準備した応答メッセージを送信
     line_bot_api.reply_message(reply_token, reply)
