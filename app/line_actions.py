@@ -116,7 +116,46 @@ class LineActions:
         except LineBotApiError as e:
             print(f"Error replying with quick reply: {e}")
             return {"status": "error", "message": str(e)}
+    
+      
+    def start_individual_hearing(self, reply_token, **kwargs):
+        """個別ヒアリングの案内と「お店を決める」ボタンを投稿する"""
+        
+        # 1. 案内メッセージを送信
+        invitation_message = TextSendMessage(text="共通の希望を承りました！\nこれから各メンバーに、個別の希望（予算など）を1対1でお伺いしますね。公式lineのトークに話しかけてください！")
+        
+        # 2. 「お店を決める」ボタンをFlex Messageで投稿
+        decision_button_message = FlexSendMessage(
+            alt_text='お店を決めるボタン',
+            contents={
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": "全員のヒアリングがある程度進んだら、お店を決定するためにこのボタンを押してください。", "wrap": True},
+                        {
+                            "type": "button", 
+                            "action": {
+                                "type": "message", 
+                                "label": "お店を決める！", 
+                                "text": "お店を決める！"
+                            }, 
+                            "style": "primary", 
+                            "margin": "md",
+                            "color": "#CB2200" 
+                        }
+                    ]
+                }
+            }
+        )
 
+        self.line_bot_api.reply_message(
+            reply_token, 
+            [invitation_message, decision_button_message]
+        )
+        return {"status": "success"}
+        
     # def start_individual_hearing(self, reply_token: str):
     #     """ダミーIDリストのメンバーに個別ヒアリングを開始する"""
     #     try:

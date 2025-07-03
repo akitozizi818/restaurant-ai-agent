@@ -50,6 +50,11 @@ function_declarations = [
             "required": ["question", "choices"]
         }
     ),
+    FunctionDeclaration(
+        name="start_individual_hearing",
+        description="グループでの共通ヒアリングが完了したと判断した時に呼び出します。個別ヒアリングの案内と、「お店を決める」ボタンをグループに投稿します。",
+        parameters={"type": "object", "properties": {}}
+    ),
     # FunctionDeclaration(
     #     name="send_start_prompt",
     #     description="グループlineでのお店決めが終了した後や、ユーザーがお店決めをやり直したい場合にお店決めを新たに開始するために使用します。",
