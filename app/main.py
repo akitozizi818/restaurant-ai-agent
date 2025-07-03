@@ -1,10 +1,12 @@
 # app/main.py
 from fastapi import FastAPI, Request, HTTPException
 from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
+from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, JoinEvent, QuickReply, QuickReplyButton, MessageAction, BubbleContainer, CarouselContainer, ImageComponent, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent, URIAction, FlexSendMessage
 from dotenv import load_dotenv
 import os
+from .line_actions import LineActions
+from fastapi.staticfiles import StaticFiles
 
 # Vertex AI関連のインポート
 import vertexai
@@ -30,6 +32,7 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 app = FastAPI()
+actions = LineActions(line_bot_api)
 
 # Vertex AIの初期化 (GCP_PROJECT_IDと認証情報を使用)
 try:
@@ -48,6 +51,8 @@ except Exception as e:
     print(f"Google Maps Client initialization failed: {e}")
     gmaps = None
 
+# "app/static" ディレクトリを "/static" というパスで公開する
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/")
 async def root():
@@ -64,191 +69,47 @@ async def callback(request: Request):
         raise HTTPException(status_code=400, detail="Invalid signature")
     return "OK"
 
-# --- この関数でカルーセルメッセージを作成して送信 ---
-def send_restaurant_carousel(reply_token, restaurant_list):
-    """
-    レストラン情報のリストを受け取り、カルーセル形式のFlex Messageを送信する
-    """
-    bubbles = []
-    # レストランの数だけ、情報カード（バブル）を作成
-    for restaurant in restaurant_list:
-        bubble = create_restaurant_bubble(restaurant)
-        bubbles.append(bubble)
-
-    # カルーセルコンテナを作成
-    carousel_container = CarouselContainer(contents=bubbles)
-
-    # FlexSendMessageを作成
-    # alt_textは、LINEのトークリストに表示される代替テキストです
-    flex_message = FlexSendMessage(
-        alt_text="おすすめのレストランが見つかりました！",
-        contents=carousel_container
-    )
-
-    # メッセージを送信
-    line_bot_api.reply_message(reply_token, flex_message)
-
-
-# --- 個別のレストラン情報カード（バブル）を作成するヘルパー関数 ---
-def create_restaurant_bubble(restaurant: dict) -> BubbleContainer:
-    """
-    一つのレストラン情報から、一つのバブルコンテナを作成する
-    """
-    return BubbleContainer(
-        # --- ヒーローブロック (メイン画像) ---
-        hero=ImageComponent(
-            url=restaurant.get("image_url", "https://example.com/default.jpg"),
-            size="full",
-            aspect_ratio="20:13",
-            aspect_mode="cover",
-            action=URIAction(uri=restaurant.get("url", "#"), label="ウェブサイト")
-        ),
-        # --- ボディブロック (店名、評価、場所などの情報) ---
-        body=BoxComponent(
-            layout="vertical",
-            spacing="sm",
-            contents=[
-                # 店名
-                TextComponent(
-                    text=restaurant.get("name", "レストラン名なし"),
-                    weight="bold",
-                    size="xl",
-                    wrap=True
-                ),
-                # 評価 (例: ★★★★☆ 4.0)
-                BoxComponent(
-                    layout="baseline",
-                    margin="md",
-                    contents=[
-                        # ここは星の数だけループさせたり、固定の星画像にしたりする
-                        TextComponent(text="★★★★☆", size="sm", color="#ffb740", flex=0),
-                        TextComponent(text=str(restaurant.get("rating", 0.0)), size="sm", color="#999999", flex=0, margin="md"),
-                    ]
-                ),
-                # ジャンルや場所
-                BoxComponent(
-                    layout="vertical",
-                    margin="lg",
-                    spacing="sm",
-                    contents=[
-                        BoxComponent(
-                            layout="baseline",
-                            spacing="sm",
-                            contents=[
-                                TextComponent(text="場所", color="#aaaaaa", size="sm", flex=1),
-                                TextComponent(text=restaurant.get("address", "-"), color="#666666", size="sm", flex=4, wrap=True),
-                            ]
-                        ),
-                        BoxComponent(
-                            layout="baseline",
-                            spacing="sm",
-                            contents=[
-                                TextComponent(text="ジャンル", color="#aaaaaa", size="sm", flex=1),
-                                TextComponent(text=restaurant.get("genre", "-"), color="#666666", size="sm", flex=4, wrap=True),
-                            ]
-                        ),
-                    ]
-                ),
-            ]
-        ),
-        # --- フッターブロック (アクションボタン) ---
-        footer=BoxComponent(
-            layout="vertical",
-            spacing="sm",
-            contents=[
-                # 詳細を見るボタン (Webサイトへ)
-                ButtonComponent(
-                    style="link",
-                    height="sm",
-                    action=URIAction(label="詳しく見る", uri=restaurant.get("url", "#"))
-                ),
-                # このお店にするボタン (ボットへの返信)
-                ButtonComponent(
-                    style="primary",
-                    height="sm",
-                    action=MessageAction(label="このお店にする！", text=f"{restaurant.get('name')}に決めます")
-                ),
-            ]
-        )
-    )
-
-dummy_restaurants = [
-    {
-        "name": "最高のイタリアン A",
-        "image_url": "https://example.com/restaurant_a.jpg",
-        "rating": 4.5,
-        "address": "東京都文京区本郷1-2-3",
-        "genre": "イタリアン",
-        "url": "https://example.com/a"
-    },
-    {
-        "name": "絶品和食 B",
-        "image_url": "https://example.com/restaurant_b.jpg",
-        "rating": 4.2,
-        "address": "東京都文京区本郷4-5-6",
-        "genre": "和食・割烹",
-        "url": "https://example.com/b"
-    },
-]
-
 # --- LINEイベントのハンドラ定義 ---
 @handler.add(JoinEvent)
 def handle_join(event):
-    """
-    ボットがグループに参加した時の処理
-    """
-    # 応答に必要な「リプライトークン」を取得
-    reply_token = event.reply_token
-
-    # 送信するメッセージを作成
-    reply_message = TextSendMessage(
-        text="こんにちは！飲み会調整ボットです🍻\n幹事さんは「調整スタート」と話しかけて、お店探しを始めてくださいね！"
-    )
-
-    # 応答メッセージを送信
-    line_bot_api.reply_message(reply_token, reply_message)
+    """ボットがグループに参加した時の処理"""
+    actions.send_join_greeting(event.reply_token)
 
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    """ユーザーからのテキストメッセージを処理"""
     reply_token = event.reply_token
-    user_message = event.message.text
+    user_id = event.source.user_id
+    user_message = event.message.text.lower().strip()
 
-    # もしメッセージが「a」だったら
-    if user_message == "a":
-        # シンプルなテキストメッセージを作成
-        reply = TextSendMessage(text="「a」が送られましたね。これはただのテキストメッセージです。")
+    # --- グループチャットでの処理 ---
+    if hasattr(event.source, 'group_id'):
+        
+        if user_message == "調整スタート":
+            actions.start_individual_hearing(reply_token)
+        
+        elif user_message == "まとめて":
+            actions.send_restaurant_carousel(reply_token)
+            
+        return
 
-    # もしメッセージが「b」だったら
-    elif user_message == "b":
-        # 選択肢付きのメッセージを作成
-        reply = TextSendMessage(
-            text="「b」が送られましたね。好きな果物を選んでください。",
-            quick_reply=QuickReply(
-                items=[
-                    QuickReplyButton(action=MessageAction(label="りんご🍎", text="りんご")),
-                    QuickReplyButton(action=MessageAction(label="バナナ🍌", text="バナナ")),
-                    QuickReplyButton(action=MessageAction(label="みかん🍊", text="みかん")),
-                ]
-            )
-        )
-
-    elif user_message == "c":
-        send_restaurant_carousel(
-            reply_token,
-            dummy_restaurants
-        )
-    
-    # 「a」でも「b」でもなかった場合
+    # --- 1対1チャットでの処理 ---
     else:
-        reply = TextSendMessage(text=f"「{event.message.text}」と送られました。'a'か'b'か'c'と送ってみてください。")
+        if user_message == "id確認":
+            actions.reply_with_text(reply_token, f"あなたのユーザーIDはこちらです：\n{user_id}")
+            return
+        
+        # ★★★ 新しい関数の呼び出しデモを追加 ★★★
+        elif user_message == "b":
+            question = "好きな果物を選んでください。"
+            choices = ["りんご🍎", "バナナ🍌", "みかん🍊"]
+            actions.reply_with_quick_reply(reply_token, question, choices)
+            return
 
-    # 準備した応答メッセージを送信
-    line_bot_api.reply_message(reply_token, reply)
-
-
-### **ここから追加するテストエンドポイント** ---
-
+        # 通常のヒアリング会話
+        else:
+            actions.reply_during_hearing(reply_token, event.message.text)
 
 @app.get("/test/vertex-ai")
 async def test_vertex_ai_connection():
