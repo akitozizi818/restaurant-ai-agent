@@ -16,19 +16,24 @@ from linebot.models import (
     IconComponent,
     SeparatorComponent,
 )
+from dotenv import load_dotenv
+load_dotenv()
+import os
+from .google_maps_actions import GoogleMapsActions
 
-NGROK_BASE_URL = "" 
+NGROK_BASE_URL = os.getenv("NGROK_BASE_URL")
 
 class LineActions:
-    def __init__(self, line_bot_api: LineBotApi):
+    def __init__(self, line_bot_api: LineBotApi, gmaps_actions: GoogleMapsActions):
         """
         コンストラクタでLineBotApiのインスタンスを受け取る
         """
         self.line_bot_api = line_bot_api
+        self.gmaps_actions = gmaps_actions 
 
         # ★★★ ここにテスト参加者のユーザーIDを手動で設定 ★★★
         self.dummy_member_ids = [
-            "",  # ダミーのユーザーID1
+            "U80a83d0230668d9c13e50d537b4b4099",  # ダミーのユーザーID1
             # "Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx2", # 友人AのユーザーID
             # "Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx3", # 友人BのユーザーID
         ]
@@ -85,6 +90,25 @@ class LineActions:
             },
         ]
 
+    def search_restaurants(self, reply_token: str, query: str):
+        """
+        AIから呼び出される、レストランを検索・提案するための関数。
+        """
+        print(f"--- search_restaurants関数がAIによって呼び出されました ---")
+        
+        # ダミーデータではなく、GoogleMapsActionsを使って本物の情報を取得
+        restaurant_list = self.gmaps_actions.search_and_format_restaurants(query)
+        
+        if not restaurant_list:
+            self.reply_with_text(reply_token, "すみません、条件に合うお店が見つかりませんでした。")
+            return {"status": "error", "message": "No restaurants found."}
+
+        # 取得した本物のデータでカルーセルを送信
+        self.send_restaurant_carousel(reply_token, restaurant_list)
+        
+        return {"status": "success", "message": f"{len(restaurant_list)}件のレストランを提案しました。"}
+
+
     def reply_with_text(self, reply_token: str, text: str):
         """シンプルなテキストメッセージを返信する"""
         try:
@@ -139,22 +163,16 @@ class LineActions:
         text = f"希望をヒアリング中です...（「{user_input}」を受け付けました）"
         self.reply_with_text(reply_token, text)
 
-    def send_restaurant_carousel(self, reply_token: str):
+    def send_restaurant_carousel(self, reply_token: str, restaurant_list: list):
         """レストラン候補をカルーセル形式のFlex Messageで送信する"""
-        bubbles = []
-        for restaurant in self.dummy_restaurants:
-            bubble = self._create_restaurant_bubble(restaurant)
-            bubbles.append(bubble)
-
+        bubbles = [self._create_restaurant_bubble(r) for r in restaurant_list]
         carousel_container = CarouselContainer(contents=bubbles)
-
-        # 提案メッセージとFlex Messageをリストで渡す
         messages_to_send = [
-            TextSendMessage(text="以下のレストランから選んでください！"),
+            TextSendMessage(text="こちらのレストランはいかがでしょうか？"),
             FlexSendMessage(
                 alt_text="おすすめのレストランが見つかりました！",
-                contents=carousel_container,
-            ),
+                contents=carousel_container
+            )
         ]
         self.line_bot_api.reply_message(reply_token, messages_to_send)
 

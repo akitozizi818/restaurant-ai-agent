@@ -6,11 +6,14 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage, JoinEvent
 from dotenv import load_dotenv
 import os
 from .line_actions import LineActions
+from .function_definitions import function_declarations
 from fastapi.staticfiles import StaticFiles
+from .ai_agent import AIAgent
+from .google_maps_actions import GoogleMapsActions
 
 # Vertex AI関連のインポート
 import vertexai
-from vertexai.preview.generative_models import GenerativeModel
+from vertexai.preview.generative_models import GenerativeModel, Tool
 
 # Google Maps Platform関連のインポート
 import googlemaps  # パッケージ名がgooglemapsであることに注意
@@ -32,14 +35,14 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 app = FastAPI()
-actions = LineActions(line_bot_api)
 
 # Vertex AIの初期化 (GCP_PROJECT_IDと認証情報を使用)
 try:
     vertexai.init(
         project=GCP_PROJECT_ID, location="us-central1"
     )  # あなたのプロジェクトのリージョンに合わせてください
-    gemini_model = GenerativeModel("gemini-2.5-flash")
+    gemini_model = GenerativeModel("gemini-2.5-flash",
+        tools=[Tool.from_function_declarations(function_declarations)])
 except Exception as e:
     print(f"Vertex AI initialization failed: {e}")
     gemini_model = None
@@ -50,6 +53,10 @@ try:
 except Exception as e:
     print(f"Google Maps Client initialization failed: {e}")
     gmaps = None
+
+gmaps_actions = GoogleMapsActions(gemini_model, os.getenv("NGROK_BASE_URL", ""))
+actions = LineActions(line_bot_api, gmaps_actions)
+ai_agent = AIAgent(gemini_model, actions)
 
 # "app/static" ディレクトリを "/static" というパスで公開する
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -79,37 +86,7 @@ def handle_join(event):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """ユーザーからのテキストメッセージを処理"""
-    reply_token = event.reply_token
-    user_id = event.source.user_id
-    user_message = event.message.text.lower().strip()
-
-    # --- グループチャットでの処理 ---
-    if hasattr(event.source, 'group_id'):
-        
-        if user_message == "調整スタート":
-            actions.start_individual_hearing(reply_token)
-        
-        elif user_message == "まとめて":
-            actions.send_restaurant_carousel(reply_token)
-            
-        return
-
-    # --- 1対1チャットでの処理 ---
-    else:
-        if user_message == "id確認":
-            actions.reply_with_text(reply_token, f"あなたのユーザーIDはこちらです：\n{user_id}")
-            return
-        
-        # ★★★ 新しい関数の呼び出しデモを追加 ★★★
-        elif user_message == "b":
-            question = "好きな果物を選んでください。"
-            choices = ["りんご🍎", "バナナ🍌", "みかん🍊"]
-            actions.reply_with_quick_reply(reply_token, question, choices)
-            return
-
-        # 通常のヒアリング会話
-        else:
-            actions.reply_during_hearing(reply_token, event.message.text)
+    ai_agent.process_message(event)
 
 @app.get("/test/vertex-ai")
 async def test_vertex_ai_connection():
