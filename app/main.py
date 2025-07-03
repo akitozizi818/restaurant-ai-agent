@@ -35,6 +35,9 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 app = FastAPI()
+# ハッカソン用のシンプルなセッション管理（共有メモ帳）
+# サーバーのメモリ上に存在するため、再起動すると消えますが、デモでは十分です。
+sessions = {}
 
 # Vertex AIの初期化 (GCP_PROJECT_IDと認証情報を使用)
 try:
@@ -86,7 +89,55 @@ def handle_join(event):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """ユーザーからのテキストメッセージを処理"""
-    ai_agent.process_message(event)
+    reply_token = event.reply_token
+    user_id = event.source.user_id
+    user_message = event.message.text
+
+    # --- グループチャットでの処理 ---
+    if hasattr(event.source, 'group_id'):
+        group_id = event.source.group_id
+        
+        if user_message.lower().strip() == "調整スタート":
+            # 「共有メモ帳」に、このグループ用の新しいページを作成
+            sessions[group_id] = {
+                "status": "hearing",
+                "preferences": {}
+            }
+            actions.reply_with_text(reply_token, "お店の調整を開始します！\nメンバーの皆さんは、私との1対1チャットで希望を教えてくださいね。")
+        
+        elif user_message.lower().strip() == "まとめて":
+            # グループのメモ帳（セッション）をAIに渡して、最終判断を仰ぐ
+            if group_id in sessions:
+                session_data = sessions[group_id]
+                ai_agent.process_final_decision(event, session_data)
+            else:
+                actions.reply_with_text(reply_token, "まず「調整スタート」と入力してください。")
+        return
+
+    # --- 1対1チャットでの処理 ---
+    else:
+        # ユーザーがどの飲み会に参加しているかを特定する（簡易的な方法）
+        active_group_id = None
+        for g_id, session in sessions.items():
+            # このデモでは、ユーザーが最後にアクティブだったグループに参加していると仮定
+            # (本来は、ユーザーが複数のグループに属している場合を考慮する必要がある)
+            active_group_id = g_id
+            break # 最初に見つかったセッションを使う
+
+        if active_group_id:
+            # 1. ユーザーの希望を「共有メモ帳」に記録
+            if user_id not in sessions[active_group_id]["preferences"]:
+                sessions[active_group_id]["preferences"][user_id] = []
+            sessions[active_group_id]["preferences"][user_id].append(user_message)
+            
+            print("--- 現在の全希望 ---")
+            print(sessions[active_group_id])
+            print("--------------------")
+            
+            # 2. AIエージェントに、現在の全希望を渡して処理させる
+            ai_agent.process_individual_message(event, sessions[active_group_id])
+        else:
+            actions.reply_with_text(reply_token, "参加中の飲み会調整が見つかりません。グループで幹事さんが「調整スタート」と入力したか確認してください。")
 
 @app.get("/test/vertex-ai")
 async def test_vertex_ai_connection():
