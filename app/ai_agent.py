@@ -9,8 +9,10 @@ class AIAgent:
         self.line_actions = line_actions
         
         if self.model:
-            self.chat = self.model.start_chat()
-            print("AIAgent chat session started.")
+            self.chat = self.model.start_chat(
+                tools=[Tool(function_declarations=function_declarations)]
+            )
+            print("AIAgent chat session started with tools.")
         else:
             self.chat = None
             print("AIAgent initialized without a model.")
@@ -42,7 +44,11 @@ class AIAgent:
                     # LineActionsのメソッドを呼び出す
                     self.line_actions.search_restaurants(
                         reply_token=reply_token,
-                        query=args.get("query", "")
+                        query=args.get("query"),
+                        location=args.get("location"),
+                        radius=args.get("radius"),
+                        min_price=args.get("min_price"),
+                        max_price=args.get("max_price")
                     )
                 else:
                     self.line_actions.reply_with_text(reply_token, "AIが不明な関数を呼び出そうとしました。")

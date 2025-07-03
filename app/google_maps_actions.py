@@ -10,13 +10,43 @@ class GoogleMapsActions:
         self.maps_api_key = os.getenv("Maps_API_KEY")
         self.ngrok_base_url = ngrok_base_url
 
-    def search_and_format_restaurants(self, query: str, max_results: int = 3) -> list:
+    def search_and_format_restaurants(
+        self, 
+        query: str = None, 
+        location: dict = None,
+        radius: int = None,
+        min_price: int = None,
+        max_price: int = None,
+        max_results: int = 3, 
+        # target_datetime: datetime = None
+    ) -> list:
         if not self.gmaps:
             print("Google Maps client not initialized.")
             return []
         print(f"Google Mapsで検索中: {query}")
         try:
-            places_result = self.gmaps.places(query=query, language='ja')
+            # パラメータを動的に構築
+            params = { 'language': 'ja' }
+            if query:
+                params['keyword'] = query
+            if min_price is not None:
+                params['min_price'] = min_price
+            if max_price is not None:
+                params['max_price'] = max_price
+
+            # locationが指定されていれば、周辺検索(nearby_search)を利用
+            if location and radius:
+                params['location'] = (location['lat'], location['lng'])
+                params['radius'] = radius
+                places_result = self.gmaps.places_nearby(**params)
+            # locationがなければ、これまで通りのテキスト検索(places)
+            elif query:
+                params['query'] = query
+                del params['keyword'] # placesではkeyword引数はないため削除
+                places_result = self.gmaps.places(**params)
+            else:
+                print("検索キーワードまたは位置情報が指定されていません。")
+                return []
             
             formatted_restaurants = []
             for place in places_result.get('results', [])[:max_results]:
