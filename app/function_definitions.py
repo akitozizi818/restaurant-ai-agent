@@ -49,5 +49,14 @@ function_declarations = [
             },
             "required": ["question", "choices"]
         }
+    ),
+    FunctionDeclaration(
+        name="send_start_prompt",
+        description="グループlineでのお店決めが終了した後や、ユーザーがお店決めをやり直したい場合にお店決めを新たに開始するために使用します。",
+        parameters={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     )
 ]

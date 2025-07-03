@@ -83,7 +83,7 @@ async def callback(request: Request):
 @handler.add(JoinEvent)
 def handle_join(event):
     """ボットがグループに参加した時の処理"""
-    actions.send_join_greeting(event.reply_token)
+    actions.send_start_prompt(event.reply_token)
 
 
 @handler.add(MessageEvent, message=TextMessage)
@@ -97,7 +97,7 @@ def handle_message(event):
     if hasattr(event.source, 'group_id'):
         group_id = event.source.group_id
         
-        if user_message.lower().strip() == "調整スタート":
+        if user_message.lower().strip() == "スタート":
             # 「共有メモ帳」に、このグループ用の新しいページを作成
             sessions[group_id] = {
                 "status": "hearing",

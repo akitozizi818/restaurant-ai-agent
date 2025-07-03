@@ -15,6 +15,8 @@ from linebot.models import (
     FlexSendMessage,
     IconComponent,
     SeparatorComponent,
+    ButtonsTemplate,
+    TemplateSendMessage,
 )
 from dotenv import load_dotenv
 load_dotenv()
@@ -75,6 +77,28 @@ class LineActions:
         except LineBotApiError as e:
             print(f"Error replying text message: {e}")
 
+    def send_start_prompt(self, reply_token, **kwargs):
+        """「調整スタート」ボタン付きのButtonsTemplateを送信する"""
+        
+        # ボタンテンプレートを作成
+        buttons_template = ButtonsTemplate(
+            thumbnail_image_url=f"{NGROK_BASE_URL}/static/logo.png",
+            title="飲食店調整AIエージェント Ochiaii（オチアイ）",
+            text="こんにちは！私はOchiaiiです！\n友人や同僚との飲食店決めをサポートします☺\n早速お店探しを始めますか？",
+            actions=[
+                MessageAction(label="スタート", text="スタート")
+            ]
+        )
+        
+        # テンプレートメッセージとして送信
+        template_message = TemplateSendMessage(
+            alt_text="お店探しを始めますか？",
+            template=buttons_template
+        )
+        
+        self.line_bot_api.reply_message(reply_token, template_message)
+        return {"status": "success", "message": "Sent start prompt button template."}
+    
     def reply_with_quick_reply(self, reply_token: str, question: str, choices: list):
         """
         質問文と選択肢リストを受け取り、クイックリプライを送信する
@@ -92,31 +116,26 @@ class LineActions:
         except LineBotApiError as e:
             print(f"Error replying with quick reply: {e}")
             return {"status": "error", "message": str(e)}
-        
-    def send_join_greeting(self, reply_token: str):
-        """グループ参加時の挨拶メッセージを送信する"""
-        text = "こんにちは！飲み会調整ボットです🍻\n幹事さんは「調整スタート」と話しかけて、お店探しを始めてくださいね！"
-        self.reply_with_text(reply_token, text)
 
-    def start_individual_hearing(self, reply_token: str):
-        """ダミーIDリストのメンバーに個別ヒアリングを開始する"""
-        try:
-            # 1. ダミーIDリストのメンバーに個別メッセージを一斉送信
-            push_message = TextSendMessage(
-                text="幹事さんからのお知らせです！\nお店探しの希望をこのトークで教えてくださいね！"
-            )
-            self.line_bot_api.multicast(self.dummy_member_ids, push_message)
+    # def start_individual_hearing(self, reply_token: str):
+    #     """ダミーIDリストのメンバーに個別ヒアリングを開始する"""
+    #     try:
+    #         # 1. ダミーIDリストのメンバーに個別メッセージを一斉送信
+    #         push_message = TextSendMessage(
+    #             text="幹事さんからのお知らせです！\nお店探しの希望をこのトークで教えてくださいね！"
+    #         )
+    #         self.line_bot_api.multicast(self.dummy_member_ids, push_message)
 
-            # 2. グループには成功したことを報告
-            reply_text = f"{len(self.dummy_member_ids)}人のメンバーに、個別でヒアリングを開始しました！"
+    #         # 2. グループには成功したことを報告
+    #         reply_text = f"{len(self.dummy_member_ids)}人のメンバーに、個別でヒアリングを開始しました！"
 
-        except LineBotApiError as e:
-            # エラーハンドリング
-            print(f"LINE API Error: {e.status_code} {e.error.message}")
-            reply_text = f"メッセージ送信でエラーが発生しました: {e.error.message}\n（メンバーがボットを友だち追加しているか確認してください）"
+    #     except LineBotApiError as e:
+    #         # エラーハンドリング
+    #         print(f"LINE API Error: {e.status_code} {e.error.message}")
+    #         reply_text = f"メッセージ送信でエラーが発生しました: {e.error.message}\n（メンバーがボットを友だち追加しているか確認してください）"
 
-        # 3. グループへの応答メッセージを送信
-        self.reply_with_text(reply_token, reply_text)
+    #     # 3. グループへの応答メッセージを送信
+    #     self.reply_with_text(reply_token, reply_text)
 
     def reply_during_hearing(self, reply_token: str, user_input: str):
         """個別ヒアリング中の応答"""
