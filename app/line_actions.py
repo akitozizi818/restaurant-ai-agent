@@ -31,14 +31,25 @@ class LineActions:
         self.line_bot_api = line_bot_api
         self.gmaps_actions = gmaps_actions 
 
-    def search_restaurants(self, reply_token: str, query: str):
+    def search_restaurants(
+        self, 
+        reply_token: str, 
+        query: str = None, 
+        min_price: int = None,
+        max_price: int = None
+    ):
         """
         AIから呼び出される、レストランを検索・提案するための関数。
         """
         print(f"--- search_restaurants関数がAIによって呼び出されました ---")
         
         # ダミーデータではなく、GoogleMapsActionsを使って本物の情報を取得
-        restaurant_list = self.gmaps_actions.search_and_format_restaurants(query)
+        restaurant_list = self.gmaps_actions.search_and_format_restaurants(
+            query=query,
+            min_price=min_price,
+            max_price=max_price,
+            # target_datetime=datetime.now() # 日時指定がない場合は現在時刻で判定
+        )
         
         if not restaurant_list:
             self.reply_with_text(reply_token, "すみません、条件に合うお店が見つかりませんでした。")
