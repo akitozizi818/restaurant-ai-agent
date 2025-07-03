@@ -62,14 +62,24 @@ class LineActions:
         
         return {"status": "success", "message": f"{len(restaurant_list)}件のレストランを提案しました。"}
     
-    def final_restaurant(self, reply_token: str, query: str):
+    def final_restaurant(
+        self, 
+        reply_token: str, 
+        query: str = None, 
+        min_price: int = None,
+        max_price: int = None
+    ):
         """
         AIから呼び出される、レストランを決定する関数。
         """
         print(f"--- final_restaurant関数がAIによって呼び出されました ---")
         
         # ダミーデータではなく、GoogleMapsActionsを使って本物の情報を取得
-        restaurant_list = self.gmaps_actions.search_and_format_restaurants(query)
+        restaurant_list = self.gmaps_actions.search_and_format_restaurants(
+            query,
+            min_price=min_price,
+            max_price=max_price,
+        )
         
         if not restaurant_list:
             self.reply_with_text(reply_token, "すみません、条件に合うお店が見つかりませんでした。")
