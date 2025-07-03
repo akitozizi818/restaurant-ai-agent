@@ -9,7 +9,7 @@ services:
       dockerfile: Dockerfile # FastAPIのDockerfile
     container_name: fastapi_app # コンテナ名を指定
     ports:
-      - "8000:8000" # ホストの8000番ポートをコンテナの8000番ポートにマッピング
+      - "8001:8000" # ホストの8000番ポートをコンテナの8000番ポートにマッピング
     volumes:
       - .:/app # ホストのプロジェクトルートをコンテナの /app にマウント
       - ./credentials:/app/credentials # ホストのcredentialsをコンテナの/app/credentialsにマウント
