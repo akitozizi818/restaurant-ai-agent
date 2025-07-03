@@ -103,15 +103,11 @@ def handle_message(event):
                 "status": "hearing",
                 "preferences": {}
             }
-            actions.reply_with_text(reply_token, "お店の調整を開始します！\nメンバーの皆さんは、私との1対1チャットで希望を教えてくださいね。")
-        
-        elif user_message.lower().strip() == "まとめて":
-            # グループのメモ帳（セッション）をAIに渡して、最終判断を仰ぐ
-            if group_id in sessions:
-                session_data = sessions[group_id]
-                ai_agent.process_final_decision(event, session_data)
-            else:
-                actions.reply_with_text(reply_token, "まず「調整スタート」と入力してください。")
+
+        if "common" not in sessions[group_id]["preferences"]:
+            sessions[group_id]["preferences"]["common"] = []
+        sessions[group_id]["preferences"]["common"].append(user_message)
+        ai_agent.process_group_message(event, sessions[group_id])
         return
 
     # --- 1対1チャットでの処理 ---

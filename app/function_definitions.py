@@ -5,7 +5,7 @@ from vertexai.generative_models import FunctionDeclaration
 function_declarations = [
     FunctionDeclaration(
         name="search_restaurants",
-        description="ユーザーがレストランや飲食店を探してほしいと依頼した時に、そのお店を検索するために使用します。",
+        description="個別ヒアリング中にユーザーの好みを探るために使用します。ユーザーが指定した地名や料理のジャンル、その他の特徴に基づいて、飲食店を検索し、結果をフォーマットして返します。",
         parameters={
             "type": "object",
             "properties": {
@@ -17,7 +17,6 @@ function_declarations = [
             "required": ["query"]
         }
     ),
-    # ★★★ ここに新しい関数の定義を追加 ★★★
     FunctionDeclaration(
         name="reply_with_quick_reply",
         description="ユーザーの希望が曖昧な場合や、確認したいことがある場合に、質問と選択肢を提示して回答を促すために使用します。",

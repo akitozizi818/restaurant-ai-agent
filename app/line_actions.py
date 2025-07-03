@@ -31,65 +31,6 @@ class LineActions:
         self.line_bot_api = line_bot_api
         self.gmaps_actions = gmaps_actions 
 
-        # ★★★ ここにテスト参加者のユーザーIDを手動で設定 ★★★
-        self.dummy_member_ids = [
-            "U80a83d0230668d9c13e50d537b4b4099",  # ダミーのユーザーID1
-            # "Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx2", # 友人AのユーザーID
-            # "Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx3", # 友人BのユーザーID
-        ]
-
-        # ダミーのレストランデータ
-        self.dummy_restaurants = [
-            # {
-            #     "name": "ル・モンド新宿店",
-            #     "address": "日本、〒160-0023 東京都新宿区西新宿１丁目１６−１１",
-            #     "rating": 4.1,
-            #     "userRatingCount": 1548,
-            #     "website": "https://www.facebook.com/lemonde.shinjuku/",
-            #     "openingHours": [
-            #       "月曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "火曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "水曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "木曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "金曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "土曜日: 11時00分～14時45分, 17時00分～21時30分",
-            #       "日曜日: 定休日"
-            #     ],
-            #     "reviewGoodSummary": "新宿ヨドバシ近くにある、カウンター席のみの小さなステーキ店。サーロイン、リブロースステーキが1700円台とコスパが良いと評判で、ランチ時は特に人気。肉質は柔らかくはないものの、旨味があり、噛み応えのある本格的なステーキが楽しめる。  ただし、店内は狭く、待ち時間が発生する場合もある。現金払いのみ。  全体的に、肉の質と価格のバランスが良く、リピーターも多い。",
-            #     "reviewBadSummary": "店内は狭く、カウンター席のみで客席数も少ないため、待ち時間が発生する可能性がある。また、現金払いのみの対応となっている。肉質は口コミによって評価が分かれ、「噛みごたえがある」「柔らかい」など、一定ではない。接客は概ね良好だが、挨拶が丁寧でないという指摘もある。コスパは良いと評価する声もある一方で、「いきなり！ステーキ」の方が優れているとの意見もある。",
-            #     "genre": "ステーキ",
-            #     "photo_resource_name": "places/ChIJaU5nFNGMGGARy31fwXoQb3s/photos/ATKogpe77KZgFB3Qr6xZaiHDjNAHeohdBDPZ_GBncibWFeC-5IvXiB4_CfevSg1_CB7OcfLT6Y1QVBA4YdYdoh15o65m0yX_odR5-mfosnyVtsRD_0obPvZtcCj-NR8ESoWlidKX67rv250hk74pq1yw-u5q4NkHsalajKJBmVSyF8cKEBwB4lMVE0Ag-ab24UqMA9NbLGcQU-JWoZzXoGZoe2oTaN7hUmGdLaKeZdcKvnvAFkHMBhzyBvIMtbE8f2oWpoZIHqoGZEPWGFsZ_TkUZdXUJVq9bap50mYEwsgFGoyScL-zxsjaRepooFU59mSkD4f7IegPhdUY7vlwr3R2HnXukmhAvr4-HRNY7r-FrYcsodzePB3l7hfU4K2K1g0IGLGmmRDkApAXuXI-4mbk0Z53P3CvGjW6EZ4I651RCANc1Q",
-            # },
-            # {
-            #     "name": "ル・モンド新宿店",
-            #     "address": "日本、〒160-0023 東京都新宿区西新宿１丁目１６−１１",
-            #     "rating": 4.1,
-            #     "userRatingCount": 1548,
-            #     "website": "https://www.facebook.com/lemonde.shinjuku/",
-            #     "openingHours": [
-            #       "月曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "火曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "水曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "木曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "金曜日: 11時00分～15時00分, 17時00分～21時30分",
-            #       "土曜日: 11時00分～14時45分, 17時00分～21時30分",
-            #       "日曜日: 定休日"
-            #     ],
-            #     "reviewGoodSummary": "新宿ヨドバシ近くにある、カウンター席のみの小さなステーキ店。サーロイン、リブロースステーキが1700円台とコスパが良いと評判で、ランチ時は特に人気。肉質は柔らかくはないものの、旨味があり、噛み応えのある本格的なステーキが楽しめる。  ただし、店内は狭く、待ち時間が発生する場合もある。現金払いのみ。  全体的に、肉の質と価格のバランスが良く、リピーターも多い。",
-            #     "reviewBadSummary": "店内は狭く、カウンター席のみで客席数も少ないため、待ち時間が発生する可能性がある。また、現金払いのみの対応となっている。肉質は口コミによって評価が分かれ、「噛みごたえがある」「柔らかい」など、一定ではない。接客は概ね良好だが、挨拶が丁寧でないという指摘もある。コスパは良いと評価する声もある一方で、「いきなり！ステーキ」の方が優れているとの意見もある。",
-            #     "genre": "ステーキ",
-            #     "photo_resource_name": "places/ChIJaU5nFNGMGGARy31fwXoQb3s/photos/ATKogpe77KZgFB3Qr6xZaiHDjNAHeohdBDPZ_GBncibWFeC-5IvXiB4_CfevSg1_CB7OcfLT6Y1QVBA4YdYdoh15o65m0yX_odR5-mfosnyVtsRD_0obPvZtcCj-NR8ESoWlidKX67rv250hk74pq1yw-u5q4NkHsalajKJBmVSyF8cKEBwB4lMVE0Ag-ab24UqMA9NbLGcQU-JWoZzXoGZoe2oTaN7hUmGdLaKeZdcKvnvAFkHMBhzyBvIMtbE8f2oWpoZIHqoGZEPWGFsZ_TkUZdXUJVq9bap50mYEwsgFGoyScL-zxsjaRepooFU59mSkD4f7IegPhdUY7vlwr3R2HnXukmhAvr4-HRNY7r-FrYcsodzePB3l7hfU4K2K1g0IGLGmmRDkApAXuXI-4mbk0Z53P3CvGjW6EZ4I651RCANc1Q",
-            # },
-            {
-                "name": "絶品和食 B",
-                "image_url": "https://placehold.co/600x400/C2D8B2/FFFFFF?text=Washoku",
-                "rating": 4.2,
-                "address": "東京都文京区本郷4-5-6",
-                "genre": "和食・割烹",
-                "url": "https://example.com/b",
-            },
-        ]
-
     def search_restaurants(self, reply_token: str, query: str):
         """
         AIから呼び出される、レストランを検索・提案するための関数。
