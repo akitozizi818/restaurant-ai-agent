@@ -85,7 +85,6 @@ def handle_join(event):
     """ボットがグループに参加した時の処理"""
     actions.send_start_prompt(event.reply_token)
 
-
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """ユーザーからのテキストメッセージを処理"""
@@ -103,6 +102,9 @@ def handle_message(event):
                 "status": "hearing",
                 "preferences": {}
             }
+
+        if user_message.lower().strip() == "終了":
+            actions.send_start_prompt(event.reply_token)
 
         if "common" not in sessions[group_id]["preferences"]:
             sessions[group_id]["preferences"]["common"] = []

@@ -283,6 +283,13 @@ class LineActions:
                             label="予約する", uri=restaurant.get("url", "#")
                         ),
                         color="#CB2200" # 背景色
+                    ),
+                    ButtonComponent(
+                        style="link",
+                        height="sm",
+                        action=MessageAction(
+                            label="終了する", text="終了"
+                        ),
                     )
                 ],
             ),
