@@ -24,7 +24,11 @@
 ![33](https://github.com/user-attachments/assets/652b3c22-687e-4bcf-8a22-426230e62a27)
 ![34](https://github.com/user-attachments/assets/9313a3e0-84aa-472e-a581-336b839ca2e6)
 
-https://github.com/user-attachments/assets/37efed93-b4d7-44e9-bba1-eab62c28cf16
+
+https://github.com/user-attachments/assets/c06e99c5-17f6-4b64-8d30-07b563b89c1a
+
+
+[デモ動画url](https://drive.google.com/file/d/1YvVgn-Qr5eNeaxQTnZVlHAfy0GqBeUNQ/view?usp=drive_link)
 
 ![36](https://github.com/user-attachments/assets/ef94446d-6cd4-48b8-b7d9-f1546a6ac153)
 ![37](https://github.com/user-attachments/assets/a3dd57b4-1cf4-4946-a3b4-4f3b3f17d1e2)
